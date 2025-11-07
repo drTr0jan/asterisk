@@ -3200,6 +3200,14 @@ static void chan_pjsip_incoming_response(struct ast_sip_session *session, struct
 	}
 
 	switch (status.code) {
+    case 100: {
+        ast_channel_lock(session->channel);
+        if (ast_channel_state(session->channel) != AST_STATE_UP) {
+            ast_setstate(session->channel, AST_STATE_DIALING);
+        }
+        ast_channel_unlock(session->channel);
+        break;
+    }
 	case 180: {
 		pjsip_rdata_sdp_info *sdp = pjsip_rdata_get_sdp_info(rdata);
 		if (sdp && sdp->body.ptr) {
@@ -3234,6 +3242,12 @@ static void chan_pjsip_incoming_response(struct ast_sip_session *session, struct
 				(int)rdata->msg_info.cseq->method.name.slen, rdata->msg_info.cseq->method.name.ptr, status.code);
 			ast_queue_control(session->channel, AST_CONTROL_PROGRESS);
 		}
+
+        ast_channel_lock(session->channel);
+        if (ast_channel_state(session->channel) != AST_STATE_UP) {
+            ast_setstate(session->channel, AST_STATE_RINGING);
+        }
+        ast_channel_unlock(session->channel);
 		break;
 	case 200:
 		ast_trace(-1, "%s: Queueing ANSWER\n", ast_sip_session_get_name(session));
